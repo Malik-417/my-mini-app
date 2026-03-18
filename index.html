@@ -1,49 +1,168 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Поймай Кота!</title>
+    <title>Супер Кот-Беглец!</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #87CEEB; text-align: center; font-family: sans-serif; overflow: hidden; margin: 0; }
-        #score { font-size: 24px; color: white; margin-top: 20px; }
+        body { 
+            background: #87CEEB; /* Небо */
+            text-align: center; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            overflow: hidden; /* Кот не убежит за пределы экрана */
+            margin: 0; 
+            user-select: none; /* Чтобы текст не выделялся при нажатии */
+        }
+        #ui-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            text-align: left;
+            background: rgba(0,0,0,0.3); /* Полупрозрачный фон */
+            padding: 10px;
+            border-radius: 10px;
+            pointer-events: none; /* Чтобы UI не мешал нажимать */
+        }
+        .stat { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+        
         #cat { 
-            font-size: 50px; 
+            font-size: 50px; /* Начальный размер кота */
             position: absolute; 
             cursor: pointer; 
-            transition: 0.2s; /* Чтобы кот прыгал плавно */
-            user-select: none;
+            transition: all 0.1s ease-out; /* Плавное движение и уменьшение */
+            z-index: 10;
+        }
+        #game-over {
+            display: none; /* Скрыто по умолчанию */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.9);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+        button#restart-btn {
+            background: #0088cc; /* Цвет Telegram */
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
 
-    <div id="score">Счёт: 0</div>
+    <div id="ui-container">
+        <div class="stat">Счёт: <span id="score">0</span></div>
+        <div class="stat">Время: <span id="time">30</span>с</div>
+    </div>
+
     <div id="cat">🐱</div>
 
+    <div id="game-over">
+        <h1>Время вышло! ⏱️</h1>
+        <p class="stat">Твой финальный счёт: <span id="final-score">0</span></p>
+        <button id="restart-btn" onclick="restartGame()">Играть снова!</button>
+    </div>
+
     <script>
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Расширить приложение на весь экран
+
         let score = 0;
+        let timeLeft = 30; // Время игры в секундах
+        let gameInterval;
+        let catUrl = '🐱'; // Можно заменить на картинку
+        let currentCatSize = 50; // Начальный размер в пикселях
+
         const cat = document.getElementById('cat');
         const scoreDisplay = document.getElementById('score');
+        const timeDisplay = document.getElementById('time');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
 
         // Функция, которая перебрасывает кота в случайное место
         function moveCat() {
-            const x = Math.random() * (window.innerWidth - 50);
-            const y = Math.random() * (window.innerHeight - 100) + 50;
+            // Размеры окна, за вычетом размера кота
+            const x = Math.random() * (window.innerWidth - currentCatSize);
+            const y = Math.random() * (window.innerHeight - currentCatSize - 50) + 50; // Оставляем место под UI
             cat.style.left = x + 'px';
             cat.style.top = y + 'px';
         }
 
+        // Основной цикл игры (вызывается каждую секунду)
+        function gameTick() {
+            timeLeft--;
+            timeDisplay.innerText = timeLeft;
+
+            // Кот убегает сам каждые полсекунды (делаем игру динамичнее)
+            moveCat(); 
+
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
         // Когда нажимаем на кота
         cat.addEventListener('click', () => {
-            score++;
-            scoreDisplay.innerText = "Счёт: " + score;
-            moveCat(); // Кот убегает!
+            if (timeLeft > 0) {
+                score++;
+                scoreDisplay.innerText = score;
+                
+                // Уменьшаем кота на 2 пикселя при каждом попадании (но не меньше 20px)
+                currentCatSize = Math.max(20, currentCatSize - 2);
+                cat.style.fontSize = currentCatSize + 'px';
+
+                // Вибрация телефона (через Telegram API)
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred('medium');
+                }
+
+                moveCat(); // Кот убегает после нажатия
+            }
         });
 
-        // Кот начинает двигаться сам при старте
-        moveCat();
+        // Начало игры
+        function startGame() {
+            score = 0;
+            timeLeft = 30;
+            currentCatSize = 50; // Сброс размера
+            cat.style.fontSize = currentCatSize + 'px';
+            scoreDisplay.innerText = score;
+            timeDisplay.innerText = timeLeft;
+            gameOverScreen.style.display = 'none';
+            cat.style.display = 'block';
+            moveCat();
+            
+            // Запускаем таймер (выполнять gameTick каждую 1000 мс = 1 секунда)
+            gameInterval = setInterval(gameTick, 1000);
+        }
+
+        // Конец игры
+        function endGame() {
+            clearInterval(gameInterval); // Остановить таймер
+            cat.style.display = 'none'; // Скрыть кота
+            gameOverScreen.style.display = 'block'; // Показать окно конца игры
+            finalScoreDisplay.innerText = score;
+        }
+
+        // Перезапуск
+        function restartGame() {
+            startGame();
+        }
+
+        // Запускаем игру при загрузке страницы
+        startGame();
+
     </script>
 </body>
 </html>
