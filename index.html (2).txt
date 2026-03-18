@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поймай Кота!</title>
+    <style>
+        body { background: #87CEEB; text-align: center; font-family: sans-serif; overflow: hidden; margin: 0; }
+        #score { font-size: 24px; color: white; margin-top: 20px; }
+        #cat { 
+            font-size: 50px; 
+            position: absolute; 
+            cursor: pointer; 
+            transition: 0.2s; /* Чтобы кот прыгал плавно */
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="score">Счёт: 0</div>
+    <div id="cat">🐱</div>
+
+    <script>
+        let score = 0;
+        const cat = document.getElementById('cat');
+        const scoreDisplay = document.getElementById('score');
+
+        // Функция, которая перебрасывает кота в случайное место
+        function moveCat() {
+            const x = Math.random() * (window.innerWidth - 50);
+            const y = Math.random() * (window.innerHeight - 100) + 50;
+            cat.style.left = x + 'px';
+            cat.style.top = y + 'px';
+        }
+
+        // Когда нажимаем на кота
+        cat.addEventListener('click', () => {
+            score++;
+            scoreDisplay.innerText = "Счёт: " + score;
+            moveCat(); // Кот убегает!
+        });
+
+        // Кот начинает двигаться сам при старте
+        moveCat();
+    </script>
+</body>
+</html>
